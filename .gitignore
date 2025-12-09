@@ -5,3 +5,4 @@ venv/
 .pycache/
 .ipynb_checkpoints
 __pycache__
+local_storage.sql
