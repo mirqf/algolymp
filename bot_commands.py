@@ -4,6 +4,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import misc, sqlite3
 from database import database as db
 import random
+from reminders import _set_reminder_target
 
 database = db()
 dp = Router()
@@ -72,6 +73,20 @@ async def status_cmd(message: types.Message):
 
     connection.close()
 
+
+@dp.message(misc.AdminFilter(), Command("event_target"))
+async def event_target_cmd(message: types.Message):
+    chat_id = message.chat.id
+    thread_id = getattr(message, "message_thread_id", None) or 0
+
+    _set_reminder_target(chat_id, thread_id)
+
+    text = f"✔ Уведомления по мероприятиям будут отправляться сюда.\nChat ID: {chat_id}"
+    if thread_id:
+        text += f"\nThread ID: {thread_id}"
+
+    await message.answer(text)
+
 @dp.message(F.text.startswith("/"))
 async def slash_handler(message: types.Message):
     if message.chat.type == "private":
@@ -101,9 +116,6 @@ async def process_text_message(message: types.Message):
         text="<b>⭐️ Выберите мероприятие, которое Вас интересует</b>",
         parse_mode="HTML",
         reply_markup=builder.as_markup(),
-    )
-    await message.answer(
-        text = '\n'.join([str(x[0]) for x in chosen])
     )
 
 rag_allowed = {"Большие вызовы"}
