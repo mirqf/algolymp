@@ -97,6 +97,9 @@ async def slash_handler(message: types.Message):
 
 @dp.message(F.text)
 async def process_text_message(message: types.Message):
+    if message.chat.type != "private":
+        return
+    
     results = []
     for event in database.get_all_events_table():
         if event.get("name"):
