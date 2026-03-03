@@ -1,2 +1,4 @@
-aiogram==3.14.0
-aiohttp==3.9.1
+python-dotenv
+psycopg2-binary
+aiogram
+aiohttp

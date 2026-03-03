@@ -1,8 +1,71 @@
+# Byte-compiled / optimized / temporary files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.egg-info/
+.eggs/
+
+# Distribution / packaging
+dist/
+build/
+wheels/
+*.whl
+*.egg
+
+# Databases
+*.sqlite3
+*.db
+*.sql
+/instance/
+
+# OS and editor files
+.DS_Store # macOS
+Thumbs.db # Windows
+.idea/ # JetBrains IDEs (PyCharm, etc.)
+.vscode/ # VS Code
+
+# Environments
 .env
-.venv/
+.venv
 env/
 venv/
-.pycache/
-.ipynb_checkpoints
-__pycache__
-local_storage.sql
+ENV/
+env.bak/
+venv.bak/
+
+# Testing and coverage
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+
+# Documentation
+docs/_build/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Django stuff
+*.log
+local_settings.py
+db.sqlite3
+
+# Flask stuff
+.webassets-cache
+
+# Scrapy stuff
+.scrapy
+
+# Specific projects
+Pipfile.lock
+.DS_Store

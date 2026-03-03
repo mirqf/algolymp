@@ -1,14 +1,17 @@
-import psycopg2, sqlite3
+import psycopg2, sqlite3, os, datetime
+from dotenv import load_dotenv
 from contextlib import contextmanager
+
+load_dotenv()
 
 class database:
     def __init__(self):
         self.config = {
-            "host": "",
-            "database": "postgres",
-            "user": "postgres",
-            "password": "",
-            "port": 5432,
+            "host": os.getenv("DB_HOST", "147.45.102.219"),
+            "database": os.getenv("DB_DATABASE", "postgres"),
+            "user": os.getenv("BOT_USER", "postgres"),
+            "password": os.getenv("DB_PASSWORD", "genatasks777"),
+            "port": int(os.getenv("DB_PORT", 5432)),
         }
         self.connection = None
     
@@ -27,7 +30,8 @@ class database:
     def get_cursor(self):
         if not self.connection or self.connection.closed:
             self.connect()
-        
+        if self.connection is None:
+            raise RuntimeError("Database connection failed (check DB_HOST, DB_DATABASE, BOT_USER, DB_PASSWORD, DB_PORT)")
         cursor = self.connection.cursor()
         try:
             yield cursor
@@ -38,7 +42,75 @@ class database:
         finally:
             cursor.close()
             self.disconnect()
+
+    def get_all_events_table(self) -> list:
+        """Возвращает все мероприятия из events в виде списка словарей (id, name, description)."""
+        with self.get_cursor() as cur:
+            cur.execute("SELECT id, name, description FROM events ORDER BY name")
+            columns = [d[0] for d in cur.description]
+            rows = cur.fetchall()
+            return [dict(zip(columns, row)) for row in rows]
     
+    def delete_event_by_id(self, event_id) -> bool:
+        with self.get_cursor() as cursor:
+            cursor.execute("DELETE FROM event_blocks WHERE event_id = %s", (event_id,))
+            cursor.execute("DELETE FROM events WHERE id = %s", (event_id,))
+        
+    def create_event_by_raw(self, data: dict) -> bool:
+        with self.get_cursor() as cursor:
+            cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM events")
+            event_id = cursor.fetchone()[0]
+            cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM event_blocks")
+            block_id = cursor.fetchone()[0]
+
+            cursor.execute("""
+                INSERT INTO events (id, name, description)
+                VALUES (%s, %s, %s)
+            """, (event_id, data.get("name", "Unknown Name"), data.get("description", ""))) 
+
+            for idx, tour_data in enumerate(data.get("tours", list())):
+                cursor.execute("""
+                    INSERT INTO event_blocks (id, event_id, start_date, end_date, name, description, link)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (block_id + idx, event_id, tour_data.get("start_date", datetime.now()), tour_data.get("end_date", datetime.now()), tour_data.get("tour_name", "Unknown Tour"), '', data.get("description", '')))
+
+        return True
+
+    def update_event_by_raw(self, event_id, data: dict) -> bool:
+        with self.get_cursor() as cursor:
+            cursor.execute(
+                """
+                    UPDATE events
+                    SET name = %s, description = %s
+                    WHERE id = %s
+                """,
+                (data.get("name", "Unknown Name"), data.get("description", ""), event_id)
+            )
+
+            cursor.execute("DELETE FROM event_blocks WHERE event_id = %s", (event_id,))
+
+            cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM event_blocks")
+            block_id = cursor.fetchone()[0]
+
+            for idx, tour_data in enumerate(data.get("tours", list())):
+                cursor.execute(
+                    """
+                        INSERT INTO event_blocks (id, event_id, start_date, end_date, name, description, link)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        block_id + idx,
+                        event_id,
+                        tour_data.get("start_date", datetime.now()),
+                        tour_data.get("end_date", datetime.now()),
+                        tour_data.get("tour_name", "Unknown Tour"),
+                        '',
+                        data.get("description", '')
+                    )
+                )
+
+        return True
+
     def copy_to_sqlite(self, sqlite_path: str = "dump.sql"):
         sq_conn = sqlite3.connect(sqlite_path)
         sq_cur = sq_conn.cursor()
